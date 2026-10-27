@@ -13,9 +13,19 @@
     console.error('Unable to read the demo login state from local storage.', error);
   }
 
-  if (isLoginPage ? isLoggedIn : !isLoggedIn) {
-    window.location.replace(isLoginPage ? 'index.html' : 'login.html');
+  if (!isLoginPage && !isLoggedIn) {
+    window.location.replace('login.html');
     return;
+  }
+
+  function endDemoSession() {
+    try {
+      window.localStorage.removeItem('isLoggedIn');
+      window.location.replace('login.html');
+    } catch (error) {
+      console.error('Unable to clear the demo login state from local storage.', error);
+      window.alert('Unable to log out. Please check your browser storage settings and try again.');
+    }
   }
 
   function startDemoSession() {
@@ -355,8 +365,11 @@
         <div class="flex items-center gap-2">
           <span id="cc-demo-pill" class="hidden text-[10px] font-bold tracking-wider text-brand-700 bg-brand-100 rounded-full px-2 py-1">DEMO</span>
           <span id="cc-clock" class="text-xs font-semibold text-sand-600 bg-sand-100 rounded-full px-3 py-1.5 tabular">--:--</span>
+          <button id="cc-logout" type="button" class="rounded-lg border border-sand-200 bg-white px-3 py-2 text-xs font-semibold text-sand-700 transition hover:border-orange-300 hover:text-orange-700 focus:outline-none focus:ring-4 focus:ring-orange-100">Log out</button>
         </div>
       </div>`;
+    const logout = $('#cc-logout');
+    if (logout) logout.addEventListener('click', endDemoSession);
 
     const bottom = $('#cc-bottom');
     if (bottom) {
