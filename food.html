@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"/>
+  <meta name="theme-color" content="#F26B1D"/>
+  <title>Food Court Pre-Order — CampusConnect</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet"/>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="assets/js/main.js"></script>
+</head>
+<body data-page="food" class="min-h-screen">
+  <header id="cc-header" class="sticky top-0 z-40 glass"></header>
+
+  <main class="max-w-6xl mx-auto px-4 py-8 sm:py-12 pb-32">
+    <p class="text-xs font-bold uppercase tracking-wider text-brand-600">🍔 Canteens &amp; cafés</p>
+    <h1 class="font-display text-3xl sm:text-5xl font-semibold mt-2">Food Court Pre-Order</h1>
+    <p class="text-sand-600 mt-3 max-w-xl">Check how crowded each canteen is, order takeaway ahead and pick it up when it is ready.</p>
+
+    <div data-tabs="fd" class="tabs mt-8" role="tablist">
+      <button class="tab active" data-tab="crowd">👥 Crowd</button>
+      <button class="tab" data-tab="order">🛍️ Pre-order</button>
+      <button class="tab" data-tab="orders">🧾 My orders</button>
+    </div>
+
+    <section data-panel="fd:crowd" class="mt-5"><div id="crowd" class="grid md:grid-cols-3 gap-4"></div></section>
+
+    <section data-panel="fd:order" class="mt-5 hidden">
+      <div id="c-chips" class="flex gap-2 overflow-x-auto no-scrollbar pb-1"></div>
+      <div id="menu" class="card divide-y divide-sand-100 mt-4"></div>
+    </section>
+
+    <section data-panel="fd:orders" class="mt-5 hidden"><div id="orders" class="grid md:grid-cols-2 gap-4"></div></section>
+  </main>
+
+  <!-- Cart bar -->
+  <div id="cart-bar" class="hidden fixed z-30 inset-x-3 bottom-[4.75rem] lg:bottom-5 lg:inset-x-auto lg:left-1/2 lg:-translate-x-1/2 lg:w-[30rem] glass-dark rounded-2xl p-3 pl-5 shadow-2xl flex items-center justify-between gap-3">
+    <div><p id="cart-count" class="text-xs text-white/70"></p><p id="cart-total" class="font-display text-xl font-semibold tabular"></p></div>
+    <button class="btn btn-primary" data-modal-open="order-modal">Review order →</button>
+  </div>
+
+  <!-- Checkout modal -->
+  <div class="modal" id="order-modal">
+    <div class="modal-backdrop" data-modal-close></div>
+    <form class="modal-panel" id="order-form" autocomplete="off">
+      <div class="flex items-start justify-between gap-3">
+        <div><p class="text-xs font-bold uppercase tracking-wider text-brand-600">Takeaway order</p><h3 id="o-title" class="font-display text-2xl font-semibold mt-1"></h3></div>
+        <button type="button" data-modal-close class="w-9 h-9 rounded-full bg-sand-100 hover:bg-sand-200" aria-label="Close">✕</button>
+      </div>
+      <ul id="o-items" class="mt-4 text-sm divide-y divide-sand-100"></ul>
+      <div class="grid grid-cols-2 gap-3 mt-4">
+        <div><label class="label" for="o-name">Name</label><input id="o-name" class="input" required placeholder="Your name"/></div>
+        <div><label class="label" for="o-time">Pickup time</label><select id="o-time" class="input"></select></div>
+      </div>
+      <p class="text-xs text-sand-500 mt-3">Pay at the counter or by UPI when you pick up. No online payment in this prototype.</p>
+      <button class="btn btn-primary w-full mt-5" type="submit">Place order · <span id="o-total"></span></button>
+    </form>
+  </div>
+
+  <footer id="cc-footer"></footer>
+  <nav id="cc-bottom"></nav>
+
+  <script>
+    CC.onReady(() => {
+      const { $, $$ } = CC;
+      const C = CC.data.canteens;
+      const MENU = {
+        main: [['Rajma Chawal', 70, '🍛'], ['Chole Bhature', 60, '🥘'], ['Veg Thali', 90, '🍱'], ['Paneer Wrap', 80, '🌯'], ['Masala Dosa', 65, '🥞']],
+        cafe: [['Cold Coffee', 90, '🥤'], ['Veg Burger', 85, '🍔'], ['Peri Peri Fries', 75, '🍟'], ['Brownie', 70, '🍫'], ['Cheese Sandwich', 80, '🥪']],
+        night: [['Maggi', 45, '🍜'], ['Aloo Paratha', 50, '🥙'], ['Samosa (2 pcs)', 30, '🥟'], ['Masala Chai', 20, '🍵'], ['Bread Pakora', 35, '🍞']]
+      };
+      const STEPS = ['Placed', 'Preparing', 'Ready'];
+      const rs = n => '₹' + n;
+      const cart = { canteen: null, items: {} };
+      let cur = 'main';
+
+      const lines = () => Object.entries(cart.items).filter(([, q]) => q > 0).map(([name, qty]) => {
+        const m = MENU[cart.canteen].find(x => x[0] === name); return { name, qty, price: m[1], emoji: m[2] };
+      });
+      const total = () => lines().reduce((s, l) => s + l.qty * l.price, 0);
+
+      function renderCrowd() {
+        $('#crowd').innerHTML = C.map(c => {
+          const s = CC.food.state(c);
+          return `<div class="card p-5 flex flex-col">
+            <div class="flex items-start justify-between gap-2"><span class="w-12 h-12 rounded-2xl bg-brand-50 grid place-items-center text-2xl">${c.emoji}</span>
+              ${s.open ? CC.rushBadge(s.level, ' crowd') : '<span class="badge badge-closed"><i class="dot"></i>Closed</span>'}</div>
+            <h3 class="font-display text-xl font-semibold mt-3">${c.name}</h3>
+            <p class="text-sm text-sand-600">${c.desc}</p>
+            <p class="text-xs text-sand-500 mt-1">🕒 ${c.hours}</p>
+            <div class="progress mt-4"><i style="width:${s.pct}%;background:${CC.rushColor[s.level]}"></i></div>
+            <div class="flex justify-between text-xs text-sand-500 mt-2"><span>${s.open ? s.pct + '% full' : '—'}</span><span>${s.open ? '~' + s.wait + ' min wait' : 'Opens ' + c.hours.split(' – ')[0]}</span></div>
+            <button class="btn ${s.open ? 'btn-primary' : 'btn-ghost'} mt-auto !mt-5" data-go="${c.id}" ${s.open ? '' : 'disabled'}>Pre-order →</button></div>`;
+        }).join('');
+      }
+
+      function renderMenu() {
+        $('#c-chips').innerHTML = C.map(c => `<button class="chip ${c.id === cur ? 'active' : ''} ${CC.food.isOpen(c) ? '' : 'opacity-50'}" data-c="${c.id}">${c.emoji} ${c.name}${CC.food.isOpen(c) ? '' : ' · closed'}</button>`).join('');
+        $('#menu').innerHTML = MENU[cur].map((m, i) => {
+          const q = cart.canteen === cur ? (cart.items[m[0]] || 0) : 0;
+          return `<div class="flex items-center gap-3 p-4">
+            <span class="text-3xl">${m[2]}</span>
+            <div class="flex-1 min-w-0"><p class="font-semibold">${m[0]}</p><p class="text-sm text-sand-500">${rs(m[1])}</p></div>
+            ${q ? `<div class="flex items-center gap-3 bg-sand-100 rounded-full p-1">
+              <button class="w-8 h-8 rounded-full bg-white font-bold" data-sub="${i}" aria-label="Remove one">−</button><span class="w-4 text-center font-semibold tabular">${q}</span>
+              <button class="w-8 h-8 rounded-full bg-brand-500 text-white font-bold" data-add="${i}" aria-label="Add one">+</button></div>`
+              : `<button class="btn btn-ghost !py-2" data-add="${i}">Add</button>`}</div>`;
+        }).join('');
+        const n = lines().reduce((s, l) => s + l.qty, 0);
+        $('#cart-bar').classList.toggle('hidden', n === 0);
+        $('#cart-count').textContent = n ? `${n} item${n > 1 ? 's' : ''} · ${C.find(c => c.id === cart.canteen).name}` : '';
+        $('#cart-total').textContent = rs(total());
+      }
+
+      function renderOrders() {
+        const os = CC.store.get('orders', []);
+        $('#orders').innerHTML = os.length ? os.map(o => {
+          const el = (Date.now() - o.createdAt) / 1000, idx = el > 50 ? 2 : el > 15 ? 1 : 0;
+          const c = C.find(x => x.id === o.canteen);
+          return `<div class="card p-5">
+            <div class="flex justify-between items-start gap-3"><div><p class="text-xs font-bold uppercase tracking-wider text-brand-600">Token</p><p class="font-display text-3xl font-semibold tabular">${o.id}</p></div>
+              <span class="badge ${idx === 2 ? 'badge-low' : 'badge-moderate'}">${STEPS[idx]}</span></div>
+            <p class="text-sm font-semibold mt-3">${c.emoji} ${c.name} · ${rs(o.total)}</p>
+            <p class="text-sm text-sand-600 mt-1">${o.items.map(i => i.qty + '× ' + CC.esc(i.name)).join(', ')}</p>
+            <p class="text-xs text-sand-500 mt-1">Pickup ${o.pickup} · for ${CC.esc(o.name)}</p>
+            <div class="mt-4 overflow-x-auto no-scrollbar">${CC.stepper(STEPS, idx)}</div>
+            ${idx === 2 ? '<p class="text-sm font-semibold text-emerald-700 bg-emerald-50 rounded-xl px-3 py-2 mt-4">Your order is ready. Show this token at the counter.</p>' : ''}</div>`;
+        }).join('') : '<div class="card p-8 text-center text-sand-500 md:col-span-2">No orders yet. Pre-order something tasty!</div>';
+      }
+
+      document.addEventListener('click', e => {
+        const g = e.target.closest('[data-go]');
+        if (g) { cur = g.dataset.go; renderMenu(); $('[data-tabs="fd"]')._select('order'); return; }
+        const c = e.target.closest('[data-c]');
+        if (c) { const cn = C.find(x => x.id === c.dataset.c); if (!CC.food.isOpen(cn)) CC.toast(cn.name + ' is closed right now', 'info'); cur = cn.id; renderMenu(); return; }
+        const a = e.target.closest('[data-add]'), s = e.target.closest('[data-sub]');
+        if (a || s) {
+          if (!CC.food.isOpen(C.find(x => x.id === cur))) return CC.toast('This canteen is closed right now', 'error');
+          const m = MENU[cur][+(a || s).dataset[a ? 'add' : 'sub']];
+          if (cart.canteen !== cur) { if (lines().length) CC.toast('Cart switched to ' + C.find(x => x.id === cur).name, 'info'); cart.canteen = cur; cart.items = {}; }
+          cart.items[m[0]] = Math.max(0, (cart.items[m[0]] || 0) + (a ? 1 : -1));
+          renderMenu();
+        }
+      });
+
+      $('#order-modal').addEventListener('modal:open', () => {
+        const c = C.find(x => x.id === cart.canteen);
+        $('#o-title').textContent = c.emoji + ' ' + c.name;
+        $('#o-items').innerHTML = lines().map(l => `<li class="flex justify-between py-2"><span>${l.emoji} ${l.qty}× ${CC.esc(l.name)}</span><span class="font-semibold tabular">${rs(l.qty * l.price)}</span></li>`).join('');
+        $('#o-total').textContent = rs(total());
+        $('#o-name').value = CC.store.get('profile', {}).name || '';
+        let base = CC.nowMin(); if (c.close > 1440 && base < c.open) base += 1440;
+        const slots = [10, 20, 30, 40, 50, 60].filter(m => base + m <= c.close); if (!slots.length) slots.push(10);
+        $('#o-time').innerHTML = slots.map(m => `<option value="${CC.minToStr(CC.nowMin() + m)}">${CC.minToStr(CC.nowMin() + m)} (in ${m} min)</option>`).join('');
+      });
+
+      $('#order-form').addEventListener('submit', e => {
+        e.preventDefault();
+        if (!lines().length) return;
+        const name = $('#o-name').value.trim();
+        const order = { id: CC.uid('FO-'), canteen: cart.canteen, items: lines().map(l => ({ name: l.name, qty: l.qty })), total: total(), pickup: $('#o-time').value, name, createdAt: Date.now() };
+        CC.store.set('orders', [order, ...CC.store.get('orders', [])].slice(0, 10));
+        CC.store.set('profile', Object.assign(CC.store.get('profile', {}), { name }));
+        cart.canteen = null; cart.items = {};
+        CC.modal.close('order-modal'); renderMenu(); renderOrders();
+        $('[data-tabs="fd"]')._select('orders');
+        CC.toast('Order ' + order.id + ' placed');
+      });
+
+      renderMenu(); renderOrders();
+      CC.every(renderCrowd, 5000);
+      setInterval(renderOrders, 3000);
+    });
+  </script>
+</body>
+</html>

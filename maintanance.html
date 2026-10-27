@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"/>
+  <meta name="theme-color" content="#F26B1D"/>
+  <title>Maintenance Ticketing — CampusConnect</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet"/>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="assets/js/main.js"></script>
+</head>
+<body data-page="maintenance" class="min-h-screen">
+  <header id="cc-header" class="sticky top-0 z-40 glass"></header>
+
+  <main class="max-w-6xl mx-auto px-4 py-8 sm:py-12">
+    <p class="text-xs font-bold uppercase tracking-wider text-brand-600">🛠️ Hostel &amp; campus repairs</p>
+    <h1 class="font-display text-3xl sm:text-5xl font-semibold mt-2">Maintenance Ticketing</h1>
+    <p class="text-sand-600 mt-3 max-w-xl">Report an issue in under a minute and follow it from Pending to Resolved. New tickets move through the stages automatically in this demo.</p>
+
+    <div data-tabs="mt" class="tabs mt-8" role="tablist">
+      <button class="tab active" data-tab="new">➕ Raise a ticket</button>
+      <button class="tab" data-tab="track">📍 My tickets</button>
+    </div>
+
+    <!-- New ticket -->
+    <form id="tk-form" data-panel="mt:new" class="card p-5 sm:p-7 mt-5 max-w-2xl space-y-5" autocomplete="off">
+      <div>
+        <span class="label">What is the issue?</span>
+        <div id="cat-chips" class="flex flex-wrap gap-2"></div>
+      </div>
+      <div class="grid sm:grid-cols-3 gap-4">
+        <div><label class="label" for="tk-name">Your name</label><input id="tk-name" class="input" required placeholder="Full name"/></div>
+        <div><label class="label" for="tk-block">Hostel / block</label>
+          <select id="tk-block" class="input"><option>BH-1</option><option>BH-2</option><option>BH-3</option><option>BH-4</option><option>GH-1</option><option>GH-2</option><option>Academic Block</option><option>Library</option></select></div>
+        <div><label class="label" for="tk-room">Room no.</label><input id="tk-room" class="input" required placeholder="e.g. 214"/></div>
+      </div>
+      <div>
+        <span class="label">Priority</span>
+        <div id="prio" class="flex gap-2">
+          <button type="button" class="chip brand active" data-prio="Normal">Normal</button>
+          <button type="button" class="chip brand" data-prio="Urgent">🔥 Urgent</button>
+        </div>
+      </div>
+      <div>
+        <label class="label" for="tk-desc">Describe the problem</label>
+        <textarea id="tk-desc" class="input" rows="4" minlength="10" maxlength="300" required placeholder="What is happening? Since when?"></textarea>
+        <p class="text-xs text-sand-500 mt-1 text-right"><span id="desc-count">0</span>/300</p>
+      </div>
+      <div>
+        <label class="label" for="tk-photo">Photo (optional)</label>
+        <label for="tk-photo" class="flex items-center gap-3 input cursor-pointer !border-dashed">
+          <span class="text-xl">📷</span><span id="photo-name" class="text-sm text-sand-600 truncate">No file chosen</span>
+        </label>
+        <input id="tk-photo" type="file" accept="image/*" class="sr-only"/>
+      </div>
+      <button class="btn btn-primary w-full sm:w-auto" type="submit">Submit ticket</button>
+    </form>
+
+    <!-- Tracker -->
+    <section data-panel="mt:track" class="mt-5 hidden">
+      <div id="flt" class="flex gap-2 overflow-x-auto no-scrollbar pb-1"></div>
+      <div id="tk-list" class="grid md:grid-cols-2 gap-4 mt-4"></div>
+    </section>
+  </main>
+
+  <!-- Ticket modal -->
+  <div class="modal" id="tk-modal">
+    <div class="modal-backdrop" data-modal-close></div>
+    <div class="modal-panel">
+      <div class="flex justify-end"><button data-modal-close class="w-9 h-9 rounded-full bg-sand-100 hover:bg-sand-200" aria-label="Close">✕</button></div>
+      <div id="tk-modal-body" class="-mt-4"></div>
+      <button data-modal-close class="btn btn-dark w-full mt-6">Done</button>
+    </div>
+  </div>
+
+  <footer id="cc-footer"></footer>
+  <nav id="cc-bottom"></nav>
+
+  <script>
+    CC.onReady(() => {
+      const { $, $$ } = CC;
+      const CATS = [['Wi-Fi', '📶'], ['AC', '❄️'], ['Water', '🚰'], ['Plumbing', '🔧'], ['Electricity', '💡'], ['Other', '🛠️']];
+      const ICON = Object.fromEntries(CATS);
+      const ST = ['Pending', 'In Progress', 'Resolved'];
+      const NOTES = ['Ticket received by hostel maintenance', 'Technician assigned', 'Issue fixed & verified'];
+      const SB = { Pending: 'badge-moderate', 'In Progress': 'bg-sky-50 text-sky-700', Resolved: 'badge-low' };
+      let cat = null, prio = 'Normal', flt = 'All', openId = null;
+
+      $('#tk-name').value = CC.store.get('profile', {}).name || '';
+      $('#cat-chips').innerHTML = CATS.map(([n, e]) => `<button type="button" class="chip brand" data-cat="${n}">${e} ${n}</button>`).join('');
+      $('#cat-chips').addEventListener('click', e => {
+        const b = e.target.closest('[data-cat]'); if (!b) return;
+        cat = b.dataset.cat; $$('[data-cat]').forEach(x => x.classList.toggle('active', x === b));
+      });
+      $('#prio').addEventListener('click', e => {
+        const b = e.target.closest('[data-prio]'); if (!b) return;
+        prio = b.dataset.prio; $$('[data-prio]').forEach(x => x.classList.toggle('active', x === b));
+      });
+      $('#tk-desc').addEventListener('input', e => { $('#desc-count').textContent = e.target.value.length; });
+      $('#tk-photo').addEventListener('change', e => { $('#photo-name').textContent = e.target.files[0] ? e.target.files[0].name : 'No file chosen'; });
+
+      const card = t => `
+        <button data-tk="${t.id}" class="card card-hover text-left p-5 w-full block">
+          <div class="flex items-start justify-between gap-3">
+            <div class="flex items-center gap-3">
+              <span class="w-11 h-11 rounded-2xl bg-brand-50 grid place-items-center text-xl shrink-0">${ICON[t.cat] || '🛠️'}</span>
+              <div><p class="font-semibold">${t.cat} issue ${t.priority === 'Urgent' ? '<span class="badge badge-high ml-1"><i class="dot"></i>Urgent</span>' : ''}</p>
+              <p class="text-xs text-sand-500">${t.id} · ${t.block}, Room ${CC.esc(t.room)} · ${CC.timeAgo(t.createdAt)}</p></div>
+            </div>
+            <span class="badge ${SB[t.status]}">${t.status}</span>
+          </div>
+          <p class="text-sm text-sand-600 mt-3 line-clamp-2">${CC.esc(t.desc)}</p>
+          <div class="mt-4 overflow-x-auto no-scrollbar">${CC.stepper(ST, ST.indexOf(t.status))}</div>
+        </button>`;
+
+      function renderList() {
+        const all = CC.tickets.all();
+        $('#flt').innerHTML = ['All', ...ST].map(f => `<button class="chip ${f === flt ? 'active' : ''}" data-flt="${f}">${f} <span class="opacity-60">${f === 'All' ? all.length : all.filter(t => t.status === f).length}</span></button>`).join('');
+        const list = all.filter(t => flt === 'All' || t.status === flt);
+        $('#tk-list').innerHTML = list.length ? list.map(card).join('') : '<div class="card p-8 text-center text-sand-500 md:col-span-2">No tickets here yet.</div>';
+      }
+
+      function fillModal() {
+        const t = CC.tickets.all().find(x => x.id === openId); if (!t) return;
+        $('#tk-modal-body').innerHTML = `
+          <p class="text-xs font-bold uppercase tracking-wider text-brand-600">Ticket ${t.id}</p>
+          <h3 class="font-display text-2xl font-semibold mt-1">${ICON[t.cat] || ''} ${t.cat} issue</h3>
+          <p class="text-sm text-sand-600 mt-1">${t.block}, Room ${CC.esc(t.room)} · ${t.priority} priority${t.photo ? ' · 📎 ' + CC.esc(t.photo) : ''}</p>
+          <p class="text-sm bg-sand-50 border border-sand-200 rounded-xl p-3 mt-4">${CC.esc(t.desc)}</p>
+          <div class="mt-5 overflow-x-auto no-scrollbar">${CC.stepper(ST, ST.indexOf(t.status))}</div>
+          <ol class="mt-5 space-y-3 border-l-2 border-sand-200 pl-4">
+            ${t.history.slice().reverse().map(h => `<li><p class="text-sm font-semibold">${h.status}</p><p class="text-xs text-sand-500">${h.note} · ${CC.timeAgo(h.at)}</p></li>`).join('')}
+          </ol>`;
+      }
+      const showTicket = id => { openId = id; fillModal(); CC.modal.open('tk-modal'); };
+      $('#tk-modal').addEventListener('modal:close', () => { openId = null; });
+
+      // Demo auto-progress for tickets created in this browser
+      function advance() {
+        const all = CC.tickets.all(), n = Date.now(); let changed = false;
+        all.forEach(t => {
+          if (!t.auto || t.status === 'Resolved') return;
+          const el = (n - t.createdAt) / 1000;
+          const target = el > 75 ? 2 : el > 30 ? 1 : 0;
+          while (ST.indexOf(t.status) < target) {
+            const k = ST.indexOf(t.status) + 1;
+            t.status = ST[k]; t.stageAt = n; t.history.push({ status: ST[k], at: n, note: NOTES[k] }); changed = true;
+          }
+        });
+        if (changed) { CC.tickets.save(all); CC.toast('A ticket status was updated', 'info'); }
+      }
+
+      $('#tk-form').addEventListener('submit', e => {
+        e.preventDefault();
+        if (!cat) return CC.toast('Please pick an issue category', 'error');
+        const all = CC.tickets.all(), n = Date.now();
+        const t = {
+          id: 'CC-' + (Math.max(...all.map(x => +x.id.slice(3))) + 1), cat, block: $('#tk-block').value, room: $('#tk-room').value.trim(),
+          priority: prio, desc: $('#tk-desc').value.trim(), photo: ($('#tk-photo').files[0] || {}).name || '',
+          createdAt: n, status: 'Pending', stageAt: n, auto: true, history: [{ status: 'Pending', at: n, note: NOTES[0] }]
+        };
+        all.unshift(t); CC.tickets.save(all);
+        CC.store.set('profile', Object.assign(CC.store.get('profile', {}), { name: $('#tk-name').value.trim() }));
+        const name = $('#tk-name').value;
+        e.target.reset(); $('#tk-name').value = name;
+        cat = null; prio = 'Normal'; $('#desc-count').textContent = '0'; $('#photo-name').textContent = 'No file chosen';
+        $$('[data-cat]').forEach(x => x.classList.remove('active'));
+        $$('[data-prio]').forEach(x => x.classList.toggle('active', x.dataset.prio === 'Normal'));
+        renderList(); showTicket(t.id); CC.toast('Ticket ' + t.id + ' raised');
+        $('[data-tabs="mt"]')._select('track');
+      });
+
+      document.addEventListener('click', e => {
+        const f = e.target.closest('[data-flt]'); if (f) { flt = f.dataset.flt; renderList(); return; }
+        const t = e.target.closest('[data-tk]'); if (t) showTicket(t.dataset.tk);
+      });
+
+      renderList();
+      setInterval(() => { advance(); renderList(); if (openId) fillModal(); }, 3000);
+    });
+  </script>
+</body>
+</html>

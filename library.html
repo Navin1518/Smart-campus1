@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"/>
+  <meta name="theme-color" content="#F26B1D"/>
+  <title>Library Seat Tracker — CampusConnect</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet"/>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="assets/js/main.js"></script>
+</head>
+<body data-page="library" class="min-h-screen">
+  <header id="cc-header" class="sticky top-0 z-40 glass"></header>
+
+  <main class="max-w-6xl mx-auto px-4 py-8 sm:py-12">
+    <p class="text-xs font-bold uppercase tracking-wider text-brand-600">📚 Central Library</p>
+    <h1 class="font-display text-3xl sm:text-5xl font-semibold mt-2">Smart Library Seat Tracker</h1>
+    <p class="text-sand-600 mt-3 max-w-xl">See live floor occupancy, check the rush level and reserve a seat before you walk over.</p>
+
+    <div class="grid grid-cols-3 gap-3 mt-7">
+      <div class="card p-4"><p class="text-[11px] font-semibold text-sand-500">Free seats</p><p id="st-free" class="font-display text-3xl font-semibold mt-1 tabular">--</p></div>
+      <div class="card p-4"><p class="text-[11px] font-semibold text-sand-500">Total seats</p><p id="st-total" class="font-display text-3xl font-semibold mt-1 tabular">--</p></div>
+      <div class="card p-4"><p class="text-[11px] font-semibold text-sand-500">Occupancy</p><p id="st-pct" class="font-display text-3xl font-semibold mt-1 tabular">--</p><div id="st-badge" class="mt-1"></div></div>
+    </div>
+
+    <div id="my-booking" class="mt-6"></div>
+
+    <div data-tabs="lib" class="tabs mt-8" role="tablist">
+      <button class="tab active" data-tab="map">🗺️ Floor map</button>
+      <button class="tab" data-tab="floors">📊 Occupancy</button>
+    </div>
+
+    <!-- Floor map -->
+    <section data-panel="lib:map" class="mt-5">
+      <div id="floor-chips" class="flex gap-2 overflow-x-auto no-scrollbar pb-1"></div>
+      <div class="card p-5 sm:p-6 mt-4">
+        <div id="floor-head" class="flex items-start justify-between gap-3 flex-wrap"></div>
+        <div class="mt-5 rounded-xl bg-sand-100 text-center text-[11px] font-bold tracking-widest text-sand-500 py-2">ENTRANCE · HELP DESK</div>
+        <div id="seat-grid" class="mt-4 grid grid-cols-8 sm:grid-cols-10 gap-1.5 sm:gap-2"></div>
+        <div class="mt-5 flex flex-wrap gap-4 text-xs font-medium text-sand-600">
+          <span class="flex items-center gap-1.5"><i class="w-3.5 h-3.5 rounded bg-white border border-sand-300"></i>Free</span>
+          <span class="flex items-center gap-1.5"><i class="w-3.5 h-3.5 rounded bg-sand-200"></i>Occupied</span>
+          <span class="flex items-center gap-1.5"><i class="w-3.5 h-3.5 rounded bg-brand-500"></i>Your seat</span>
+        </div>
+      </div>
+      <p class="text-xs text-sand-500 mt-3">Tap a free seat to reserve it. Unclaimed seats are released 15 minutes after the start time.</p>
+    </section>
+
+    <!-- Occupancy overview -->
+    <section data-panel="lib:floors" class="mt-5 hidden">
+      <div id="floor-cards" class="grid sm:grid-cols-2 gap-4"></div>
+    </section>
+  </main>
+
+  <!-- Booking modal -->
+  <div class="modal" id="book-modal">
+    <div class="modal-backdrop" data-modal-close></div>
+    <form class="modal-panel" id="book-form" autocomplete="off">
+      <div class="flex items-start justify-between gap-3">
+        <div>
+          <p class="text-xs font-bold uppercase tracking-wider text-brand-600">Reserve seat</p>
+          <h3 id="bk-title" class="font-display text-2xl font-semibold mt-1"></h3>
+          <p id="bk-sub" class="text-sm text-sand-600"></p>
+        </div>
+        <button type="button" data-modal-close class="w-9 h-9 rounded-full bg-sand-100 hover:bg-sand-200" aria-label="Close">✕</button>
+      </div>
+      <div class="grid gap-4 mt-5">
+        <div><label class="label" for="bk-name">Full name</label><input id="bk-name" class="input" required placeholder="e.g. Navin Chaudhary"/></div>
+        <div><label class="label" for="bk-reg">Registration no.</label><input id="bk-reg" class="input" required placeholder="e.g. 12345678"/></div>
+        <div class="grid grid-cols-2 gap-3">
+          <div><label class="label" for="bk-dur">Duration</label>
+            <select id="bk-dur" class="input"><option value="60">1 hour</option><option value="120" selected>2 hours</option><option value="180">3 hours</option><option value="240">4 hours</option></select></div>
+          <div><label class="label" for="bk-start">Starts</label>
+            <select id="bk-start" class="input"><option value="0">Right now</option><option value="15">In 15 min</option></select></div>
+        </div>
+      </div>
+      <button class="btn btn-primary w-full mt-6" type="submit">Confirm booking</button>
+    </form>
+  </div>
+
+  <footer id="cc-footer"></footer>
+  <nav id="cc-bottom"></nav>
+
+  <script>
+    CC.onReady(() => {
+      const $ = CC.$;
+      const floors = CC.data.floors;
+      let cur = floors[0], pick = null;
+      const show = ts => CC.fmtClock(new Date(ts + CC.store.get('offset', 0)));
+
+      // Deterministic "random" seat order so the map looks stable between refreshes
+      const orders = new Map(floors.map((f, fi) => {
+        let x = (fi + 1) * 9301 + 49297;
+        const a = Array.from({ length: f.total }, (_, i) => i);
+        for (let i = a.length - 1; i > 0; i--) {
+          x = (x * 9301 + 49297) % 233280;
+          const j = Math.floor((x / 233280) * (i + 1));
+          [a[i], a[j]] = [a[j], a[i]];
+        }
+        return [f.id, a];
+      }));
+      const seatId = (f, i) => f.prefix + '-' + CC.pad(i + 1);
+
+      function render() {
+        const s = CC.library.summary(), b = CC.library.booking();
+        $('#st-free').textContent = s.free;
+        $('#st-total').textContent = s.total;
+        $('#st-pct').textContent = s.pct + '%';
+        $('#st-badge').innerHTML = CC.rushBadge(CC.rush(s.pct), ' rush');
+
+        $('#my-booking').innerHTML = b ? `
+          <div class="card p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4 !border-brand-200 !bg-brand-50/60">
+            <div>
+              <p class="text-xs font-bold uppercase tracking-wider text-brand-700">Your seat</p>
+              <p class="font-display text-2xl font-semibold mt-1">${b.seat} · ${CC.esc(b.floorName)}</p>
+              <p class="text-sm text-sand-600 mt-1">${show(b.start)} – ${show(b.end)} · ${b.checkedIn ? '✅ Checked in' : 'Check in before ' + show(b.start + 15 * 60e3) + ' or the seat is released'}</p>
+            </div>
+            <div class="flex gap-2">
+              ${b.checkedIn ? '' : '<button class="btn btn-primary" data-act="checkin">Check in</button>'}
+              <button class="btn btn-ghost" data-act="cancel">Cancel</button>
+            </div>
+          </div>` : '';
+
+        $('#floor-chips').innerHTML = floors.map(f => `<button class="chip ${f.id === cur.id ? 'active' : ''}" data-floor="${f.id}">${f.name}</button>`).join('');
+
+        const occ = CC.library.occupied(cur), taken = new Set(orders.get(cur.id).slice(0, occ));
+        const pct = Math.round((occ / cur.total) * 100);
+        $('#floor-head').innerHTML = `<div><h2 class="font-display text-2xl font-semibold">${cur.name}</h2>
+          <p class="text-sm text-sand-600">${cur.zone} · <b class="tabular">${cur.total - occ}</b> of ${cur.total} seats free</p></div>${CC.rushBadge(CC.rush(pct), ' rush · ' + pct + '%')}`;
+        $('#seat-grid').innerHTML = Array.from({ length: cur.total }, (_, i) => {
+          const id = seatId(cur, i), mine = b && b.seat === id, t = taken.has(i);
+          const cls = mine ? 'bg-brand-500 text-white border-brand-500 shadow-lift'
+            : t ? 'bg-sand-200 text-sand-400 border-sand-200 cursor-not-allowed'
+            : 'bg-white text-sand-700 border-sand-300 hover:border-brand-400 hover:bg-brand-50';
+          return `<button ${t && !mine ? 'disabled' : ''} data-seat="${id}" title="${id}" class="aspect-square rounded-lg border text-[10px] sm:text-xs font-semibold transition ${cls}">${i + 1}</button>`;
+        }).join('');
+
+        $('#floor-cards').innerHTML = floors.map(f => {
+          const o = CC.library.occupied(f), p = Math.round((o / f.total) * 100), l = CC.rush(p);
+          return `<div class="card p-5">
+            <div class="flex justify-between items-start gap-2"><div><p class="font-semibold">${f.name}</p><p class="text-xs text-sand-500">${f.zone}</p></div>${CC.rushBadge(l)}</div>
+            <p class="font-display text-3xl font-semibold mt-4 tabular">${f.total - o}<span class="text-base text-sand-500 font-sans font-medium"> / ${f.total} free</span></p>
+            <div class="progress mt-3"><i style="width:${p}%;background:${CC.rushColor[l]}"></i></div>
+            <div class="flex items-center justify-between mt-4"><span class="text-xs text-sand-500">${p}% occupied</span><button class="btn btn-ghost !py-2" data-floor="${f.id}">Open map</button></div></div>`;
+        }).join('');
+      }
+
+      document.addEventListener('click', e => {
+        const fb = e.target.closest('[data-floor]');
+        if (fb) { cur = floors.find(f => f.id === fb.dataset.floor); render(); $('[data-tabs="lib"]')._select('map'); return; }
+        const sb = e.target.closest('[data-seat]');
+        if (sb) {
+          if (CC.library.booking()) return CC.toast('You already have a seat. Cancel it to book another.', 'info');
+          pick = sb.dataset.seat;
+          $('#bk-title').textContent = 'Seat ' + pick;
+          $('#bk-sub').textContent = cur.name + ' · ' + cur.zone;
+          const p = CC.store.get('profile', {});
+          $('#bk-name').value = p.name || ''; $('#bk-reg').value = p.reg || '';
+          CC.modal.open('book-modal');
+          return;
+        }
+        const ab = e.target.closest('[data-act]');
+        if (ab) {
+          const b = CC.library.booking(); if (!b) return;
+          if (ab.dataset.act === 'checkin') { b.checkedIn = true; CC.store.set('seatBooking', b); CC.toast('Checked in. Happy studying!'); }
+          else { CC.store.set('seatBooking', null); CC.toast('Booking cancelled', 'info'); }
+          render();
+        }
+      });
+
+      $('#book-form').addEventListener('submit', e => {
+        e.preventDefault();
+        if (!pick) return;
+        const name = $('#bk-name').value.trim(), reg = $('#bk-reg').value.trim();
+        const start = Date.now() + (+$('#bk-start').value) * 60e3;
+        CC.store.set('seatBooking', { seat: pick, floor: cur.id, floorName: cur.name, name, reg, start, end: start + (+$('#bk-dur').value) * 60e3, checkedIn: false });
+        CC.store.set('profile', Object.assign(CC.store.get('profile', {}), { name, reg }));
+        CC.modal.close('book-modal');
+        CC.toast('Seat ' + pick + ' reserved');
+        render();
+      });
+
+      CC.every(render, 6000);
+    });
+  </script>
+</body>
+</html>

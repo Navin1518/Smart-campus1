@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"/>
+  <meta name="theme-color" content="#F26B1D"/>
+  <title>CampusConnect — One platform. Every campus need.</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet"/>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="assets/js/main.js"></script>
+</head>
+<body data-page="home" class="min-h-screen">
+  <header id="cc-header" class="sticky top-0 z-40 glass"></header>
+
+  <main>
+    <!-- HERO -->
+    <section class="max-w-6xl mx-auto px-4 pt-8 sm:pt-14 pb-10 grid lg:grid-cols-[1.15fr_.85fr] gap-8 lg:gap-12 items-center">
+      <div class="reveal">
+        <span class="inline-flex items-center gap-2 rounded-full bg-white border border-sand-200 px-3 py-1.5 text-xs font-semibold text-sand-700 shadow-soft">✨ WebSprint-2026 · Team Ocean · LPU</span>
+        <p id="greet" class="mt-6 text-sm font-semibold text-sand-500"></p>
+        <h1 class="font-display text-[2.6rem] sm:text-6xl font-semibold leading-[1.05] mt-2">
+          One platform.<br/><span class="text-brand-600">Every campus need.</span><br/>Zero confusion.
+        </h1>
+        <p class="mt-5 text-base sm:text-lg text-sand-600 max-w-xl">Library seats, maintenance, shuttle, emergency help, food and notices — students do not lack facilities, they lack one fast and reliable way to reach them.</p>
+        <div class="mt-7 flex flex-wrap gap-3">
+          <a href="#services" class="btn btn-primary">Explore services →</a>
+          <a href="emergency.html" class="btn btn-ghost">🚨 Emergency help</a>
+        </div>
+      </div>
+
+      <!-- Live card -->
+      <div class="glass rounded-3xl p-5 shadow-soft border border-white/80 reveal">
+        <div class="flex items-center justify-between mb-4">
+          <p class="text-xs font-bold uppercase tracking-wider text-sand-500">Live on campus</p>
+          <span class="flex items-center gap-1.5 text-xs font-semibold text-emerald-700"><i class="dot bg-emerald-500 animate-pulse"></i>Live</span>
+        </div>
+        <div class="grid grid-cols-2 gap-3">
+          <a href="library.html" class="rounded-2xl bg-white p-4 border border-sand-200 hover:border-brand-300 transition">
+            <p class="text-[11px] font-semibold text-sand-500">📚 Library seats free</p>
+            <p id="hs-seats" class="font-display text-3xl font-semibold mt-1 tabular">--</p>
+            <div id="hs-seats-badge" class="mt-2"></div>
+          </a>
+          <a href="shuttle.html" class="rounded-2xl bg-white p-4 border border-sand-200 hover:border-brand-300 transition">
+            <p class="text-[11px] font-semibold text-sand-500">🚌 Next shuttle in</p>
+            <p id="hs-bus" class="font-display text-3xl font-semibold mt-1 tabular">--:--</p>
+            <p id="hs-bus-sub" class="text-xs text-sand-500 mt-2 truncate"></p>
+          </a>
+          <a href="maintenance.html" class="rounded-2xl bg-white p-4 border border-sand-200 hover:border-brand-300 transition">
+            <p class="text-[11px] font-semibold text-sand-500">🛠️ Open tickets</p>
+            <p id="hs-tix" class="font-display text-3xl font-semibold mt-1 tabular">--</p>
+            <p class="text-xs text-sand-500 mt-2">Tracked live</p>
+          </a>
+          <a href="food.html" class="rounded-2xl bg-white p-4 border border-sand-200 hover:border-brand-300 transition">
+            <p class="text-[11px] font-semibold text-sand-500">🍔 Shortest queue</p>
+            <p id="hs-food" class="font-semibold text-base mt-2 truncate">--</p>
+            <div id="hs-food-badge" class="mt-2"></div>
+          </a>
+        </div>
+      </div>
+    </section>
+
+    <!-- Urgent strip -->
+    <section class="max-w-6xl mx-auto px-4">
+      <a href="notices.html" class="flex items-center gap-3 rounded-2xl bg-rose-50 border border-rose-100 px-4 py-3 hover:bg-rose-100/70 transition">
+        <span class="badge badge-high shrink-0"><i class="dot"></i>Urgent</span>
+        <p id="urgent-text" class="text-sm font-medium text-rose-900 truncate flex-1"></p>
+        <span class="text-sm font-semibold text-rose-700 shrink-0">View →</span>
+      </a>
+    </section>
+
+    <!-- Services -->
+    <section id="services" class="max-w-6xl mx-auto px-4 pt-14">
+      <div class="max-w-2xl reveal">
+        <p class="text-xs font-bold uppercase tracking-wider text-brand-600">Six services · one place</p>
+        <h2 class="font-display text-3xl sm:text-4xl font-semibold mt-2">Pick a service. Finish it in seconds.</h2>
+      </div>
+      <div id="svc-grid" class="mt-8 grid sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-5"></div>
+    </section>
+
+    <!-- How it works -->
+    <section class="max-w-6xl mx-auto px-4 pt-16">
+      <div class="card p-6 sm:p-10 reveal">
+        <h2 class="font-display text-2xl sm:text-3xl font-semibold">How it works</h2>
+        <div class="mt-8 grid sm:grid-cols-4 gap-6">
+          <div><span class="w-10 h-10 rounded-full bg-brand-100 text-brand-700 grid place-items-center font-bold">1</span><p class="font-semibold mt-3">Open CampusConnect</p><p class="text-sm text-sand-600 mt-1">No logins, no hunting through chats and notice boards.</p></div>
+          <div><span class="w-10 h-10 rounded-full bg-brand-100 text-brand-700 grid place-items-center font-bold">2</span><p class="font-semibold mt-3">Pick a service</p><p class="text-sm text-sand-600 mt-1">Library, repairs, shuttle, SOS, food or notices.</p></div>
+          <div><span class="w-10 h-10 rounded-full bg-brand-100 text-brand-700 grid place-items-center font-bold">3</span><p class="font-semibold mt-3">Finish in seconds</p><p class="text-sm text-sand-600 mt-1">Book a seat, raise a ticket or pre-order in a few taps.</p></div>
+          <div><span class="w-10 h-10 rounded-full bg-brand-100 text-brand-700 grid place-items-center font-bold">4</span><p class="font-semibold mt-3">Track the status</p><p class="text-sm text-sand-600 mt-1">Every request shows its progress until it is done.</p></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Student voices -->
+    <section class="max-w-6xl mx-auto px-4 pt-16">
+      <div class="max-w-2xl reveal">
+        <p class="text-xs font-bold uppercase tracking-wider text-brand-600">Built from real feedback</p>
+        <h2 class="font-display text-3xl sm:text-4xl font-semibold mt-2">What students told us</h2>
+      </div>
+      <div class="mt-8 grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+        <div class="card p-5 reveal"><p class="text-2xl">😤</p><p class="font-semibold mt-2">Hostel students</p><p class="text-sm text-sand-600 mt-1">“Maintenance complaints take days to be noticed.”</p></div>
+        <div class="card p-5 reveal"><p class="text-2xl">😒</p><p class="font-semibold mt-2">Library users</p><p class="text-sm text-sand-600 mt-1">“I walk all the way there and find no seat.”</p></div>
+        <div class="card p-5 reveal"><p class="text-2xl">😕</p><p class="font-semibold mt-2">Day scholars</p><p class="text-sm text-sand-600 mt-1">“I'm never sure about shuttle timings and notices.”</p></div>
+        <div class="card p-5 reveal"><p class="text-2xl">😟</p><p class="font-semibold mt-2">First-year students</p><p class="text-sm text-sand-600 mt-1">“I don't know whom to contact or where to go.”</p></div>
+        <div class="card p-5 reveal"><p class="text-2xl">⏳</p><p class="font-semibold mt-2">Canteen visitors</p><p class="text-sm text-sand-600 mt-1">“Queues during break time are endless.”</p></div>
+        <div class="rounded-[1.25rem] bg-sand-900 text-white p-5 reveal flex flex-col justify-center">
+          <p class="font-display text-xl leading-snug">“Students do not lack facilities; they lack a single, fast, and reliable way to access them.”</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- CTA -->
+    <section class="max-w-6xl mx-auto px-4 pt-16">
+      <div class="rounded-3xl bg-gradient-to-br from-brand-500 to-brand-700 text-white p-8 sm:p-12 reveal relative overflow-hidden">
+        <div class="absolute -right-10 -top-10 w-56 h-56 rounded-full bg-white/10 blur-2xl"></div>
+        <h2 class="font-display text-3xl sm:text-4xl font-semibold max-w-xl relative">Making campus life smarter, safer, and simpler.</h2>
+        <div class="mt-6 flex flex-wrap gap-3 relative">
+          <a href="library.html" class="btn bg-white text-brand-700 hover:bg-brand-50">Book a seat</a>
+          <a href="maintenance.html" class="btn border-white/40 text-white hover:bg-white/10">Report an issue</a>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer id="cc-footer"></footer>
+  <nav id="cc-bottom"></nav>
+
+  <script>
+    CC.onReady(() => {
+      const $ = CC.$;
+      const pill = t => `<span class="inline-flex items-center gap-1.5 rounded-full bg-sand-100 px-2.5 py-1 text-[11px] font-semibold text-sand-700">${t}</span>`;
+      const services = [
+        { id: 'lv-lib', href: 'library.html', emoji: '📚', tint: 'bg-sky-50', title: 'Smart Library Seat Tracker', desc: 'See live floor occupancy and book a seat before you walk over.', feats: ['Live occupancy', 'Rush status', 'One-click booking'], impact: 'Saves student time' },
+        { id: 'lv-fix', href: 'maintenance.html', emoji: '🛠️', tint: 'bg-amber-50', title: 'Maintenance Ticketing', desc: 'Report Wi-Fi, AC, water or power issues and track every step.', feats: ['6 categories', 'Photo upload', 'Status tracker'], impact: 'Faster resolution' },
+        { id: 'lv-bus', href: 'shuttle.html', emoji: '🚌', tint: 'bg-emerald-50', title: 'Shuttle & Bus Timings', desc: 'Live countdown, route details and a simple route tracker.', feats: ['Live countdown', 'Timetable', 'Track route'], impact: 'Better time management' },
+        { id: 'lv-sos', href: 'emergency.html', emoji: '🚨', tint: 'bg-rose-50', title: 'Emergency & Warden Connect', desc: 'One tap opens WhatsApp with a ready message to security or warden.', feats: ['SOS in one tap', 'Warden & security', 'Prefilled message'], impact: 'Improved safety' },
+        { id: 'lv-food', href: 'food.html', emoji: '🍔', tint: 'bg-orange-50', title: 'Food Court Pre-Order', desc: 'Check the crowd, pre-order takeaway and skip the queue.', feats: ['Crowd status', '3 canteens', 'Pickup time'], impact: 'Less waiting time' },
+        { id: 'lv-note', href: 'notices.html', emoji: '📢', tint: 'bg-violet-50', title: 'Notice Board & Outpass', desc: 'Urgent announcements with filters, plus outpass request tracking.', feats: ['Tag filters', 'Outpass status', 'Share on WhatsApp'], impact: 'Better communication' }
+      ];
+      $('#svc-grid').innerHTML = services.map(s => `
+        <a href="${s.href}" class="card card-hover reveal p-5 sm:p-6 flex flex-col gap-4 group">
+          <div class="flex items-start justify-between gap-2">
+            <span class="w-12 h-12 rounded-2xl grid place-items-center text-2xl ${s.tint}">${s.emoji}</span>
+            <span id="${s.id}"></span>
+          </div>
+          <div>
+            <h3 class="font-display text-xl font-semibold leading-snug">${s.title}</h3>
+            <p class="text-sm text-sand-600 mt-1.5">${s.desc}</p>
+          </div>
+          <div class="flex flex-wrap gap-1.5">${s.feats.map(f => `<span class="text-[11px] font-medium text-sand-600 bg-sand-100 rounded-full px-2.5 py-1">${f}</span>`).join('')}</div>
+          <div class="mt-auto pt-3 border-t border-sand-100 flex items-center justify-between">
+            <span class="text-xs font-semibold text-emerald-700">Impact: ${s.impact}</span>
+            <span class="text-sm font-semibold text-brand-600 transition group-hover:translate-x-1">Open →</span>
+          </div>
+        </a>`).join('');
+      CC.reveal();
+
+      const hour = CC.time.now().getHours();
+      const first = (CC.store.get('profile', {}).name || '').split(' ')[0];
+      $('#greet').textContent = `${hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : 'Good evening'}${first ? ', ' + CC.esc(first) : ''} 👋`;
+
+      const urgent = CC.data.notices.filter(n => n.tag === 'Urgent').sort((a, b) => b.ts - a.ts);
+      $('#urgent-text').textContent = urgent[0].title;
+
+      function refresh() {
+        const s = CC.library.summary(), lvl = CC.rush(s.pct);
+        $('#hs-seats').textContent = s.free;
+        $('#hs-seats-badge').innerHTML = CC.rushBadge(lvl, ' rush');
+        $('#lv-lib').innerHTML = CC.rushBad

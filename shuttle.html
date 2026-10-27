@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"/>
+  <meta name="theme-color" content="#F26B1D"/>
+  <title>Shuttle &amp; Bus Timings — CampusConnect</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet"/>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="assets/js/main.js"></script>
+</head>
+<body data-page="shuttle" class="min-h-screen">
+  <header id="cc-header" class="sticky top-0 z-40 glass"></header>
+
+  <main class="max-w-6xl mx-auto px-4 py-8 sm:py-12">
+    <p class="text-xs font-bold uppercase tracking-wider text-brand-600">🚌 Campus transport</p>
+    <h1 class="font-display text-3xl sm:text-5xl font-semibold mt-2">Shuttle &amp; Bus Timings</h1>
+    <p class="text-sand-600 mt-3 max-w-xl">Never miss a bus again. Live countdown, full timetable and a simple route tracker.</p>
+
+    <div id="route-chips" class="flex gap-2 overflow-x-auto no-scrollbar pb-1 mt-7"></div>
+
+    <div class="grid lg:grid-cols-[.9fr_1.1fr] gap-5 mt-4">
+      <!-- Countdown -->
+      <div class="card p-6 sm:p-8 self-start">
+        <p id="cd-label" class="text-xs font-bold uppercase tracking-wider text-sand-500">Next departure</p>
+        <p id="cd" class="font-display text-6xl sm:text-7xl font-semibold mt-2 tabular">--:--</p>
+        <p id="cd-sub" class="text-sm text-sand-600 mt-2"></p>
+        <div class="progress mt-5"><i id="cd-bar" style="width:0"></i></div>
+        <p id="cd-info" class="text-xs text-sand-500 mt-3"></p>
+        <button id="remind" class="btn btn-ghost w-full mt-5">🔔 Remind me 5 min before</button>
+      </div>
+
+      <!-- Tabs -->
+      <div>
+        <div data-tabs="bus" class="tabs" role="tablist">
+          <button class="tab active" data-tab="live">📍 Live tracker</button>
+          <button class="tab" data-tab="time">🗓️ Timetable</button>
+        </div>
+        <div data-panel="bus:live" class="card p-5 sm:p-6 mt-4">
+          <p id="bus-status" class="text-sm font-semibold text-sand-700 bg-sand-100 rounded-xl px-3 py-2 mb-5"></p>
+          <ul id="tracker"></ul>
+        </div>
+        <div data-panel="bus:time" class="card p-5 sm:p-6 mt-4 hidden">
+          <p class="text-sm text-sand-600 mb-3">Upcoming trips for the selected route.</p>
+          <div id="timetable" class="overflow-x-auto no-scrollbar"></div>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <footer id="cc-footer"></footer>
+  <nav id="cc-bottom"></nav>
+
+  <script>
+    CC.onReady(() => {
+      const { $, $$ } = CC;
+      const R = CC.data.shuttle;
+      let ri = 0, remind = false, fired = false, ttKey = '';
+      const hm = s => CC.minToStr(+s.slice(0, 2) * 60 + +s.slice(3));
+
+      function chips() {
+        $('#route-chips').innerHTML = R.map((r, i) => `<button class="chip ${i === ri ? 'active' : ''}" data-r="${i}"><i class="dot" style="background:${r.color}"></i>${r.name}</button>`).join('');
+      }
+      document.addEventListener('click', e => {
+        const b = e.target.closest('[data-r]'); if (!b) return;
+        ri = +b.dataset.r; fired = false; ttKey = ''; chips(); tick();
+      });
+      $('#remind').addEventListener('click', e => {
+        remind = !remind; fired = false;
+        e.currentTarget.textContent = remind ? '🔔 Reminder on — tap to turn off' : '🔔 Remind me 5 min before';
+        e.currentTarget.classList.toggle('btn-dark', remind);
+        CC.toast(remind ? 'We will remind you 5 minutes before departure' : 'Reminder turned off', 'info');
+      });
+
+      function tick() {
+        const r = R[ri], i = CC.shuttleInfo(r);
+        const last = r.stops[r.stops.length - 1];
+        $('#cd').textContent = CC.fmtCountdown(i.secsLeft);
+        $('#cd-label').textContent = i.tomorrow ? 'Service resumes tomorrow' : 'Next departure';
+        $('#cd-sub').textContent = `${r.stops[0].n} → ${last.n} · ${CC.minToStr(i.nextM)}${i.tomorrow ? ' (tomorrow)' : ''}`;
+        $('#cd-bar').style.width = (i.progress * 100) + '%';
+        $('#cd-bar').style.background = r.color;
+        $('#cd-info').textContent = `Runs ${hm(r.start)} – ${hm(r.end)} · every ${r.every} min · ${i.ride} min ride`;
+
+        if (remind && !fired && !i.tomorrow && i.secsLeft <= 300) { fired = true; CC.toast(r.name + ' leaves in 5 minutes. Head to the stop!', 'info'); }
+
+        const onRoad = i.transit !== null;
+        const since = onRoad ? i.nowM - i.prevM : -1;
+        const tripStart = onRoad ? i.prevM : i.nextM;
+        $('#bus-status').textContent = onRoad
+          ? `🚌 A ${r.name} bus is on the road · ${Math.round(i.transit * 100)}% of the route done`
+          : `⏳ Waiting at ${r.stops[0].n} · departs ${CC.minToStr(i.nextM)}`;
+
+        $('#tracker').innerHTML = r.stops.map((s, k) => {
+          const passed = since >= s.t, nxt = r.stops[k + 1];
+          const between = nxt && since >= s.t && since < nxt.t;
+          return `<li class="relative pl-11 pb-6 last:pb-0">
+            ${nxt ? `<span class="absolute left-[.8rem] top-7 bottom-[-.1rem] w-0.5 ${since >= nxt.t ? 'bg-brand-500' : 'bg-sand-200'}"></span>` : ''}
+            <span class="absolute left-0 top-0 w-7 h-7 rounded-full grid place-items-center text-xs font-bold ${passed ? 'bg-brand-500 text-white' : 'bg-white border-2 border-sand-300 text-sand-400'}">${passed ? '✓' : k + 1}</span>
+            <div class="flex justify-between gap-3"><p class="font-semibold ${passed ? 'text-sand-500' : ''}">${s.n}</p><p class="text-sm font-semibold tabular ${passed ? 'text-sand-400' : 'text-sand-800'}">${CC.minToStr(tripStart + s.t)}</p></div>
+            ${between ? `<p class="mt-2 text-xs font-semibold text-brand-700 bg-brand-50 inline-block rounded-full px-2.5 py-1">🚌 On the way to ${nxt.n}</p>` : ''}</li>`;
+        }).join('');
+
+        const key = ri + ':' + i.idx;
+        if (key !== ttKey) {
+          ttKey = key;
+          const trips = i.deps.slice(i.idx, i.idx + 5);
+          $('#timetable').innerHTML = `<table class="w-full text-sm"><thead><tr><th class="text-left py-2 pr-3 text-xs text-sand-500">Stop</th>
+            ${trips.map((d, k) => `<th class="px-3 py-2 text-xs ${k === 0 ? 'text-brand-700' : 'text-sand-500'}">${k === 0 ? 'Next' : 'Trip ' + (k + 1)}</th>`).join('')}</tr></thead>
+            <tbody>${r.stops.map(s => `<tr class="border-t border-sand-100"><td class="py-2.5 pr-3 font-semibold whitespace-nowrap">${s.n}</td>
+              ${trips.map((d, k) => `<td class="px-3 text-center tabular whitespace-nowrap ${k === 0 ? 'font-semibold bg-brand-50' : 'text-sand-600'}">${CC.minToStr(d + s.t)}</td>`).join('')}</tr>`).join('')}</tbody></table>`;
+        }
+      }
+
+      chips();
+      CC.every(tick, 1000);
+    });
+  </script>
+</body>
+</html>

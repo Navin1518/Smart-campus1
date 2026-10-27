@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"/>
+  <meta name="theme-color" content="#F26B1D"/>
+  <title>Emergency &amp; Warden Connect — CampusConnect</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet"/>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="assets/js/main.js"></script>
+</head>
+<body data-page="emergency" class="min-h-screen">
+  <header id="cc-header" class="sticky top-0 z-40 glass"></header>
+
+  <main class="max-w-6xl mx-auto px-4 py-8 sm:py-12">
+    <p class="text-xs font-bold uppercase tracking-wider text-rose-600">🚨 Safety first</p>
+    <h1 class="font-display text-3xl sm:text-5xl font-semibold mt-2">Emergency &amp; Warden Connect</h1>
+    <p class="text-sand-600 mt-3 max-w-xl">One tap opens WhatsApp with a ready-made message to campus security. You can also reach your warden or the medical centre directly.</p>
+
+    <div class="grid lg:grid-cols-[1fr_1.1fr] gap-5 mt-8">
+      <!-- SOS -->
+      <div class="card p-6 sm:p-8 text-center self-start">
+        <button id="sos-btn" class="mx-auto w-48 h-48 sm:w-56 sm:h-56 rounded-full bg-gradient-to-br from-rose-500 to-rose-700 text-white shadow-2xl grid place-items-center active:scale-95 transition" style="animation:ccsos 2s infinite" aria-label="Send SOS to security on WhatsApp">
+          <span><span class="block text-5xl">🚨</span><span class="block font-display text-3xl font-semibold mt-1">SOS</span><span class="block text-xs font-semibold opacity-90 mt-1">Tap to alert security</span></span>
+        </button>
+        <p class="text-xs text-sand-500 mt-5">Opens WhatsApp with your message pre-filled. You only need to press send.</p>
+        <div class="grid grid-cols-2 gap-3 mt-5 text-left">
+          <div><label class="label" for="em-name">Your name</label><input id="em-name" class="input" placeholder="Full name"/></div>
+          <div><label class="label" for="em-loc">Where are you?</label><input id="em-loc" class="input" placeholder="e.g. BH-3, 2nd floor"/></div>
+        </div>
+        <button id="gps" class="btn btn-ghost w-full mt-3">📍 Add my GPS location</button>
+      </div>
+
+      <div class="space-y-5">
+        <!-- Message builder -->
+        <div class="card p-5 sm:p-6">
+          <span class="label">What kind of emergency?</span>
+          <div id="types" class="flex flex-wrap gap-2"></div>
+          <label class="label mt-4" for="em-msg">Message preview (editable)</label>
+          <textarea id="em-msg" class="input" rows="6"></textarea>
+        </div>
+
+        <!-- Contacts -->
+        <div id="contacts" class="space-y-3"></div>
+
+        <!-- Helplines -->
+        <div class="card p-5 sm:p-6">
+          <p class="font-semibold">National helplines</p>
+          <div class="grid grid-cols-2 sm:grid-cols-3 gap-2 mt-3 text-sm">
+            <a class="btn btn-ghost" href="tel:112">🆘 112 · Emergency</a>
+            <a class="btn btn-ghost" href="tel:100">👮 100 · Police</a>
+            <a class="btn btn-ghost" href="tel:108">🚑 108 · Ambulance</a>
+            <a class="btn btn-ghost" href="tel:101">🔥 101 · Fire</a>
+            <a class="btn btn-ghost" href="tel:1091">👩 1091 · Women</a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <footer id="cc-footer"></footer>
+  <nav id="cc-bottom"></nav>
+
+  <script>
+    CC.onReady(() => {
+      const { $, $$ } = CC;
+      const TYPES = [['Medical', '🩺'], ['Safety', '🛡️'], ['Fire', '🔥'], ['Harassment', '🚫'], ['Stuck / Lost', '🧭'], ['Other', '❗']];
+      const contacts = CC.config.contacts;
+      let type = 'Medical', gps = '', edited = false;
+
+      const p = CC.store.get('profile', {});
+      $('#em-name').value = p.name || ''; $('#em-loc').value = p.loc || '';
+
+      $('#types').innerHTML = TYPES.map(([n, e]) => `<button class="chip brand ${n === type ? 'active' : ''}" data-type="${n}">${e} ${n}</button>`).join('');
+
+      function build() {
+        const name = $('#em-name').value.trim() || 'A student', loc = $('#em-loc').value.trim() || 'Not shared';
+        return `🚨 ${type.toUpperCase()} EMERGENCY — I need help immediately.\nName: ${name}\nLocation: ${loc}${gps ? '\nMap: ' + gps : ''}\nTime: ${CC.fmtClock(CC.time.now())}\nSent via CampusConnect`;
+      }
+      function sync() { if (!edited) $('#em-msg').value = build(); }
+
+      $('#contacts').innerHTML = Object.entries(contacts).map(([k, c]) => `
+        <div class="card p-4 flex items-center gap-3">
+          <span class="w-12 h-12 rounded-2xl bg-sand-100 grid place-items-center text-2xl shrink-0">${c.emoji}</span>
+          <div class="min-w-0 flex-1"><p class="font-semibold truncate">${c.name}</p><p class="text-xs text-sand-500 truncate">${c.role}</p></div>
+          <div class="flex gap-2 shrink-0">
+            <button class="btn btn-wa !px-3" data-wa="${k}" aria-label="WhatsApp ${c.name}">💬 <span class="hidden sm:inline">WhatsApp</span></button>
+            <a class="btn btn-ghost !px-3" href="tel:${c.tel}" aria-label="Call ${c.name}">📞</a>
+          </div>
+        </div>`).join('');
+
+      const send = key => {
+        if (navigator.vibrate) navigator.vibrate(150);
+        const text = $('#em-msg').value.trim() || build();
+        CC.store.set('profile', Object.assign(CC.store.get('profile', {}), { name: $('#em-name').value.trim(), loc: $('#em-loc').value.trim() }));
+        window.open(CC.wa(contacts[key].wa, text), '_blank', 'noopener');
+        CC.toast('Opening WhatsApp for ' + contacts[key].name, 'info');
+      };
+
+      document.addEventListener('click', e => {
+        const t = e.target.closest('[data-type]');
+        if (t) { type = t.dataset.type; edited = false; $$('[data-type]').forEach(x => x.classList.toggle('active', x === t)); sync(); return; }
+        const w = e.target.closest('[data-wa]'); if (w) send(w.dataset.wa);
+      });
+      $('#sos-btn').addEventListener('click', () => send('security'));
+      ['#em-name', '#em-loc'].forEach(s => $(s).addEventListener('input', () => { edited = false; sync(); }));
+      $('#em-msg').addEventListener('input', () => { edited = true; });
+
+      $('#gps').addEventListener('click', () => {
+        if (!navigator.geolocation) return CC.toast('GPS is not available on this device', 'error');
+        CC.toast('Getting your location…', 'info');
+        navigator.geolocation.getCurrentPosition(
+          pos => { gps = `https://maps.google.com/?q=${pos.coords.latitude.toFixed(5)},${pos.coords.longitude.toFixed(5)}`; edited = false; sync(); CC.toast('Location added to your message'); },
+          () => CC.toast('Could not get location. Please type it manually.', 'error'),
+          { enableHighAccuracy: true, timeout: 8000 }
+        );
+      });
+
+      sync();
+    });
+  </script>
+</body>
+</html>

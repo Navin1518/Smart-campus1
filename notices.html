@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"/>
+  <meta name="theme-color" content="#F26B1D"/>
+  <title>Notice Board &amp; Outpass — CampusConnect</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet"/>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="assets/js/main.js"></script>
+</head>
+<body data-page="notices" class="min-h-screen">
+  <header id="cc-header" class="sticky top-0 z-40 glass"></header>
+
+  <main class="max-w-6xl mx-auto px-4 py-8 sm:py-12">
+    <p class="text-xs font-bold uppercase tracking-wider text-brand-600">📢 Stay informed</p>
+    <h1 class="font-display text-3xl sm:text-5xl font-semibold mt-2">Notice Board &amp; Outpass</h1>
+    <p class="text-sand-600 mt-3 max-w-xl">Every campus announcement in one place, plus outpass requests with live status tracking.</p>
+
+    <div data-tabs="nt" class="tabs mt-8" role="tablist">
+      <button class="tab active" data-tab="board">📌 Notice board</button>
+      <button class="tab" data-tab="outpass">🎫 Outpass</button>
+    </div>
+
+    <!-- Board -->
+    <section data-panel="nt:board" class="mt-5">
+      <div class="flex flex-col sm:flex-row gap-3 sm:items-center">
+        <div id="tag-chips" class="flex gap-2 overflow-x-auto no-scrollbar pb-1 flex-1"></div>
+        <input id="search" class="input sm:max-w-xs" type="search" placeholder="Search notices…" aria-label="Search notices"/>
+      </div>
+      <div id="notice-list" class="grid md:grid-cols-2 gap-4 mt-4"></div>
+    </section>
+
+    <!-- Outpass -->
+    <section data-panel="nt:outpass" class="mt-5 hidden">
+      <div class="grid lg:grid-cols-2 gap-5">
+        <form id="op-form" class="card p-5 sm:p-7 space-y-4 self-start" autocomplete="off">
+          <h2 class="font-display text-2xl font-semibold">Request an outpass</h2>
+          <div class="grid sm:grid-cols-2 gap-4">
+            <div><label class="label" for="op-name">Full name</label><input id="op-name" class="input" required/></div>
+            <div><label class="label" for="op-reg">Registration no.</label><input id="op-reg" class="input" required/></div>
+          </div>
+          <div class="grid sm:grid-cols-2 gap-4">
+            <div><label class="label" for="op-type">Type</label>
+              <select id="op-type" class="input"><option>Local outing</option><option>Home visit</option><option>Medical</option><option>Other</option></select></div>
+            <div><label class="label" for="op-dest">Destination</label><input id="op-dest" class="input" required placeholder="e.g. Phagwara market"/></div>
+          </div>
+          <div class="grid sm:grid-cols-2 gap-4">
+            <div><label class="label" for="op-leave">Leaving</label><input id="op-leave" type="datetime-local" class="input" required/></div>
+            <div><label class="label" for="op-back">Returning</label><input id="op-back" type="datetime-local" class="input" required/></div>
+          </div>
+          <div><label class="label" for="op-reason">Reason</label><textarea id="op-reason" class="input" rows="3" required placeholder="Short reason for the outpass"></textarea></div>
+          <p class="text-xs text-sand-500">Tip: apply at least 2 hours before departure. Hostel gates close at 10:00 PM.</p>
+          <button class="btn btn-primary w-full sm:w-auto" type="submit">Submit request</button>
+        </form>
+        <div>
+          <h2 class="font-display text-2xl font-semibold mb-3">Your requests</h2>
+          <div id="op-list" class="space-y-4"></div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- Notice modal -->
+  <div class="modal" id="n-modal">
+    <div class="modal-backdrop" data-modal-close></div>
+    <div class="modal-panel">
+      <div class="flex justify-end"><button data-modal-close class="w-9 h-9 rounded-full bg-sand-100 hover:bg-sand-200" aria-label="Close">✕</button></div>
+      <div id="n-body" class="-mt-4"></div>
+      <div class="grid grid-cols-2 gap-3 mt-6">
+        <button id="n-share" class="btn btn-wa">💬 Share on WhatsApp</button>
+        <button data-modal-close class="btn btn-dark">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <footer id="cc-footer"></footer>
+  <nav id="cc-bottom"></nav>
+
+  <script>
+    CC.onReady(() => {
+      const { $ } = CC;
+      const TAGS = ['All', 'Urgent', 'Exam', 'Event', 'Holiday', 'Hostel'];
+      const TAGC = { Urgent: 'badge-high', Exam: 'bg-sky-50 text-sky-700', Event: 'bg-violet-50 text-violet-700', Holiday: 'bg-emerald-50 text-emerald-700', Hostel: 'bg-amber-50 text-amber-700' };
+      const tag = t => `<span class="badge ${TAGC[t]}">${t === 'Urgent' ? '<i class="dot"></i>' : ''}${t}</span>`;
+      const STEPS = ['Applied', 'Warden review', 'Approved'];
+      let flt = 'All', q = '', openNotice = null;
+
+      function renderNotices() {
+        $('#tag-chips').innerHTML = TAGS.map(t => `<button class="chip ${t === flt ? 'active' : ''}" data-tag="${t}">${t}</button>`).join('');
+        const list = CC.data.notices
+          .filter(n => (flt === 'All' || n.tag === flt) && (n.title + ' ' + n.body).toLowerCase().includes(q))
+          .sort((a, b) => (b.pinned - a.pinned) || (b.ts - a.ts));
+        $('#notice-list').innerHTML = list.length ? list.map(n => `
+          <button data-n="${n.id}" class="card card-hover text-left p-5 block w-full ${n.tag === 'Urgent' ? '!border-rose-200' : ''}">
+            <div class="flex items-center justify-between gap-2">${tag(n.tag)}<span class="text-xs text-sand-500">${n.pinned ? '📌 ' : ''}${CC.timeAgo(n.ts)}</span></div>
+            <h3 class="font-display text-lg font-semibold mt-3 leading-snug">${CC.esc(n.title)}</h3>
+            <p class="text-sm text-sand-600 mt-1.5 line-clamp-2">${CC.esc(n.body)}</p>
+            <p class="text-xs text-sand-500 mt-3">${CC.esc(n.from)}</p></button>`).join('')
+          : '<div class="card p-8 text-center text-sand-500 md:col-span-2">No notices match your filter.</div>';
+      }
+
+      document.addEventListener('click', e => {
+        const t = e.target.closest('[data-tag]'); if (t) { flt = t.dataset.tag; renderNotices(); return; }
+        const n = e.target.closest('[data-n]');
+        if (n) {
+          openNotice = CC.data.notices.find(x => x.id === +n.dataset.n);
+          $('#n-body').innerHTML = `${tag(openNotice.tag)}
+            <h3 class="font-display text-2xl font-semibold mt-3 leading-snug">${CC.esc(openNotice.title)}</h3>
+            <p class="text-xs text-sand-500 mt-1">${CC.esc(openNotice.from)} · ${CC.timeAgo(openNotice.ts)}</p>
+            <p class="text-sm text-sand-700 mt-4 leading-relaxed">${CC.esc(openNotice.body)}</p>`;
+          CC.modal.open('n-modal');
+        }
+      });
+      $('#search').addEventListener('input', e => { q = e.target.value.trim().toLowerCase(); renderNotices(); });
+      $('#n-share').addEventListener('click', () => {
+        if (!openNotice) return;
+        window.open(CC.wa('', `📢 ${openNotice.title}\n\n${openNotice.body}\n\n— via CampusConnect`), '_blank', 'noopener');
+      });
+
+      /* ---------- Outpass ---------- */
+      const dl = d => `${d.getFullYear()}-${CC.pad(d.getMonth() + 1)}-${CC.pad(d.getDate())}T${CC.pad(d.getHours())}:${CC.pad(d.getMinutes())}`;
+      const fmt = v => new Date(v).toLocaleString('en-IN', { dateStyle: 'medium', timeStyle: 'short' });
+      const p = CC.store.get('profile', {});
+      $('#op-name').value = p.name || ''; $('#op-reg').value = p.reg || '';
+      $('#op-leave').value = dl(new Date(Date.now() + 2 * 3600e3));
+      $('#op-back').value = dl(new Date(Date.now() + 8 * 3600e3));
+
+      function renderOutpass() {
+        const list = CC.store.get('outpasses', []);
+        $('#op-list').innerHTML = list.length ? list.map(o => {
+          const el = (Date.now() - o.createdAt) / 1000, idx = el > 45 ? 2 : el > 15 ? 1 : 0;
+          return `<div class="card p-5">
+            <div class="flex items-start justify-between gap-3"><div><p class="font-semibold">${CC.esc(o.type)} · ${CC.esc(o.dest)}</p><p class="text-xs text-sand-500 mt-0.5">${o.id} · ${CC.timeAgo(o.createdAt)}</p></div>
+              <span class="badge ${idx === 2 ? 'badge-low' : 'badge-moderate'}">${STEPS[idx]}</span></div>
+            <p class="text-xs text-sand-600 mt-3">🚪 ${fmt(o.leave)}<br/>🏠 ${fmt(o.back)}</p>
+            <div class="mt-4 overflow-x-auto no-scrollbar">${CC.stepper(STEPS, idx)}</div>
+            ${idx === 2 ? `<div class="mt-4 rounded-xl bg-emerald-50 text-emerald-800 px-4 py-3 text-sm"><p class="font-semibold">Approved. Show this code at the hostel gate:</p><p class="font-display text-2xl font-semibold tracking-widest mt-1">${o.id}</p></div>` : ''}</div>`;
+        }).join('') : '<div class="card p-8 text-center text-sand-500">No outpass requests yet.</div>';
+      }
+
+      $('#op-form').addEventListener('submit', e => {
+        e.preventDefault();
+        const leave = $('#op-leave').value, back = $('#op-back').value;
+        if (new Date(back) <= new Date(leave)) return CC.toast('Return time must be after leaving time', 'error');
+        const name = $('#op-name').value.trim(), reg = $('#op-reg').value.trim();
+        const o = { id: CC.uid('OP-'), name, reg, type: $('#op-type').value, dest: $('#op-dest').value.trim(), leave, back, reason: $('#op-reason').value.trim(), createdAt: Date.now() };
+        CC.store.set('outpasses', [o, ...CC.store.get('outpasses', [])].slice(0, 10));
+        CC.store.set('profile', Object.assign(CC.store.get('profile', {}), { name, reg }));
+        $('#op-dest').value = ''; $('#op-reason').value = '';
+        renderOutpass(); CC.toast('Outpass ' + o.id + ' submitted');
+      });
+
+      renderNotices(); renderOutpass();
+      setInterval(renderOutpass, 3000);
+    });
+  </script>
+</body>
+</html>
