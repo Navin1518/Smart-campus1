@@ -5,6 +5,33 @@
 (function () {
   'use strict';
 
+  const isLoginPage = /(?:^|\/)login\.html$/.test(window.location.pathname);
+  let isLoggedIn = false;
+  try {
+    isLoggedIn = window.localStorage.getItem('isLoggedIn') === 'true';
+  } catch (error) {
+    console.error('Unable to read the demo login state from local storage.', error);
+  }
+
+  if (isLoginPage ? isLoggedIn : !isLoggedIn) {
+    window.location.replace(isLoginPage ? 'index.html' : 'login.html');
+    return;
+  }
+
+  function startDemoSession() {
+    try {
+      window.localStorage.setItem('isLoggedIn', 'true');
+      window.location.replace('index.html');
+    } catch (error) {
+      console.error('Unable to save the demo login state to local storage.', error);
+      const message = document.getElementById('login-message');
+      if (message) {
+        message.textContent = 'Your browser could not save this demo session. Enable local storage and try again.';
+        message.classList.remove('hidden');
+      }
+    }
+  }
+
   /* =====================================================
      1. TAILWIND THEME  (warm neutrals + LPU-style orange)
   ===================================================== */
@@ -313,6 +340,7 @@
 
   function mountLayout() {
     const page = document.body.dataset.page;
+    if (page === 'login') return;
 
     const header = $('#cc-header');
     if (header) header.innerHTML = `
@@ -401,6 +429,34 @@
     const c = e.target.closest('[data-modal-close]'); if (c) { const m = c.closest('.modal'); if (m) CC.modal.close(m.id); }
   });
   document.addEventListener('keydown', e => { if (e.key === 'Escape') CC.modal.closeAll(); });
+
+  CC.onReady(() => {
+    const form = $('#demo-login-form');
+    const guestButton = $('#demo-guest');
+    const passwordToggle = $('#password-toggle');
+    const password = $('#password');
+    const forgotPassword = $('#forgot-password');
+    const message = $('#login-message');
+
+    if (form) form.addEventListener('submit', event => {
+      event.preventDefault();
+      startDemoSession();
+    });
+
+    if (guestButton) guestButton.addEventListener('click', startDemoSession);
+
+    if (passwordToggle && password) passwordToggle.addEventListener('click', () => {
+      const isVisible = password.type === 'text';
+      password.type = isVisible ? 'password' : 'text';
+      passwordToggle.setAttribute('aria-label', isVisible ? 'Show password' : 'Hide password');
+    });
+
+    if (forgotPassword && message) forgotPassword.addEventListener('click', event => {
+      event.preventDefault();
+      message.textContent = 'Password recovery is not available in this frontend demo.';
+      message.classList.remove('hidden');
+    });
+  });
 
   CC.onReady(() => { mountLayout(); initTabs(); CC.reveal(); });
 })();
